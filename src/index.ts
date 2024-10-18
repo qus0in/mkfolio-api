@@ -1,18 +1,31 @@
-/**
- * Welcome to Cloudflare Workers! This is your first worker.
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Open a browser tab at http://localhost:8787/ to see your worker in action
- * - Run `npm run deploy` to publish your worker
- *
- * Bind resources to your worker in `wrangler.toml`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
+import { callModel } from './api';
+import { addCorsHeaders } from './utils';
+
+interface IRequestBody {
+	techStack: string[];
+	goldCircleWhy: string[];
+	goldCircleHow: string[];
+	goldCircleWhat: string[];
+}
 
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
-		return new Response('Hello World!');
+		const allowOrigin = env.ALLOW_ORIGIN || '*';
+		if (request.method === 'OPTIONS') {
+			return addCorsHeaders(allowOrigin, new Response(null));
+		}
+		await new Promise((resolve) => setTimeout(resolve, 3000));
+
+		const data: IRequestBody = await request.json();
+
+		let content = '';
+		content += `Tech Stack: ${data.techStack.join(', ')}\n\n`;
+		content += `Why: ${data.goldCircleWhy.join(', ')}\n\n`;
+		content += `How: ${data.goldCircleHow.join(', ')}\n\n`;
+		content += `What: ${data.goldCircleWhat.join(', ')}`;
+
+		const modelResponse = await callModel({ apiKey: env.API_KEY, content });
+		const response = new Response(JSON.stringify(modelResponse));
+		return addCorsHeaders(allowOrigin, response);
 	},
 } satisfies ExportedHandler<Env>;
